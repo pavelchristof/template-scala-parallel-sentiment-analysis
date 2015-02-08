@@ -1,10 +1,10 @@
 {
   "id": "default",
   "description": "Default settings",
-  "engineFactory": "org.template.vanilla.VanillaEngine",
+  "engineFactory": "org.template.word2vec.Word2VecEngine",
   "datasource": {
     "params" : {
-      "appId": 1
+      "appId": 2
     }
   },
   "algorithms": [

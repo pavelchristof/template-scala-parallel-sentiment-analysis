@@ -1,13 +1,12 @@
-package org.template.vanilla
+package org.template.word2vec
 
-import io.prediction.controller.IEngineFactory
-import io.prediction.controller.Engine
+import io.prediction.controller.{Engine, IEngineFactory}
 
 case class Query(q: String) extends Serializable
 
 case class PredictedResult(p: String) extends Serializable
 
-object VanillaEngine extends IEngineFactory {
+object Word2VecEngine extends IEngineFactory {
   def apply() = {
     new Engine(
       classOf[DataSource],

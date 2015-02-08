@@ -1,8 +1,6 @@
-import AssemblyKeys._
-
 assemblySettings
 
-name := "template-scala-parallel-vanilla"
+name := "template-scala-parallel-word2vec"
 
 organization := "io.prediction"
 

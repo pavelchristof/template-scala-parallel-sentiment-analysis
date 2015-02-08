@@ -1,4 +1,4 @@
-package org.template.vanilla
+package org.template.word2vec
 
 import io.prediction.controller.LServing
 

@@ -1,20 +1,16 @@
-package org.template.vanilla
+package org.template.word2vec
 
 import io.prediction.controller.PPreparator
-import io.prediction.data.storage.Event
-
 import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
 
 class Preparator
   extends PPreparator[TrainingData, PreparedData] {
 
   def prepare(sc: SparkContext, trainingData: TrainingData): PreparedData = {
-    new PreparedData(events = trainingData.events)
+    PreparedData(tweets = trainingData.tweets)
   }
 }
 
-class PreparedData(
-  val events: RDD[Event]
-) extends Serializable
+case class PreparedData(tweets: RDD[Tweet])
+  extends Serializable

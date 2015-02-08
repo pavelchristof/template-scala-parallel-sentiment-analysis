@@ -1,17 +1,10 @@
-package org.template.vanilla
-
-import io.prediction.controller.PDataSource
-import io.prediction.controller.EmptyEvaluationInfo
-import io.prediction.controller.EmptyActualResult
-import io.prediction.controller.Params
-import io.prediction.data.storage.Event
-import io.prediction.data.storage.Storage
-
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
-import org.apache.spark.rdd.RDD
+package org.template.word2vec
 
 import grizzled.slf4j.Logger
+import io.prediction.controller._
+import io.prediction.data.storage.Storage
+import org.apache.spark.SparkContext
+import org.apache.spark.rdd.RDD
 
 case class DataSourceParams(appId: Int) extends Params
 
@@ -24,21 +17,28 @@ class DataSource(val dsp: DataSourceParams)
   override
   def readTraining(sc: SparkContext): TrainingData = {
     val eventsDb = Storage.getPEvents()
-    // read all events of EVENT involving ENTITY_TYPE and TARGET_ENTITY_TYPE
-    val eventsRDD: RDD[Event] = eventsDb.find(
-      appId = dsp.appId,
-      entityType = Some("ENTITY_TYPE"),
-      eventNames = Some(List("EVENT")),
-      targetEntityType = Some(Some("TARGET_ENTITY_TYPE")))(sc)
+    val tweets = eventsDb
+      .find(
+        appId = dsp.appId,
+        entityType = Some("source"),
+        eventNames = Some(List("tweet"))
+      )(sc)
+      .map(e => Tweet(
+      e.properties.get[String]("text"),
+      e.properties.get[String]("sentiment")
+    ))
 
-    new TrainingData(eventsRDD)
+    new TrainingData(tweets)
   }
 }
 
-class TrainingData(
-  val events: RDD[Event]
-) extends Serializable {
-  override def toString = {
-    s"events: [${events.count()}] (${events.take(2).toList}...)"
+case class Tweet(text: String,
+                 sentiment: String)
+  extends Serializable
+
+class TrainingData(val tweets: RDD[Tweet])
+  extends Serializable with SanityCheck {
+  override def sanityCheck(): Unit = {
+    assert(tweets.count() > 0)
   }
 }

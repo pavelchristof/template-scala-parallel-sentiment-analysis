@@ -1,13 +1,7 @@
-package org.template.vanilla
-
-import io.prediction.controller.P2LAlgorithm
-import io.prediction.controller.Params
-
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
-import org.apache.spark.rdd.RDD
+package org.template.word2vec
 
 import grizzled.slf4j.Logger
+import io.prediction.controller.{P2LAlgorithm, Params}
 
 case class AlgorithmParams(mult: Int) extends Params
 
@@ -21,7 +15,7 @@ class Algorithm(val ap: AlgorithmParams)
     // Simply count number of events
     // and multiple it by the algorithm parameter
     // and store the number as model
-    val count = data.events.count().toInt * ap.mult
+    val count = data.tweets.count().toInt * ap.mult
     new Model(mc = count)
   }
 
@@ -32,6 +26,7 @@ class Algorithm(val ap: AlgorithmParams)
   }
 }
 
-class Model(val mc: Int) extends Serializable {
-  override def toString = s"mc=${mc}"
+class Model(val mc: Int)
+  extends Serializable {
+  override def toString = s"mc=$mc"
 }
