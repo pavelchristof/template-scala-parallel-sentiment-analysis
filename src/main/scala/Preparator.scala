@@ -8,7 +8,7 @@ class Preparator
   extends PPreparator[TrainingData, PreparedData] {
 
   def prepare(sc: SparkContext, trainingData: TrainingData): PreparedData = {
-    PreparedData(trainingData.tweets.map(_.text).sample(false, 0.01))
+    PreparedData(trainingData.tweets.map(_.text).sample(false, 0.1))
   }
 }
 

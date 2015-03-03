@@ -8,4 +8,4 @@ import readline
 engine_client = predictionio.EngineClient(url="http://localhost:8000")
 while True:
     word = raw_input('Enter a word: ')
-    print engine_client.send_query({"word": word})
+    print engine_client.send_query({"word": word, "num": 10})

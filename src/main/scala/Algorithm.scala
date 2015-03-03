@@ -1,31 +1,48 @@
 package org.template.word2vec
 
 import grizzled.slf4j.Logger
-import io.prediction.controller.{P2LAlgorithm, Params}
+import io.prediction.controller._
 import org.deeplearning4j.models.embeddings.WeightLookupTable
 import org.deeplearning4j.models.word2vec.wordstore.VocabCache
-import org.deeplearning4j.spark.models.word2vec.{Word2VecPerformer, Word2Vec}
+import org.deeplearning4j.spark.models.word2vec.Word2Vec
+import org.nd4j.linalg.api.ndarray.INDArray
+import org.nd4j.linalg.factory.{BlasWrapper, Nd4j}
+import org.nd4j.linalg.ops.transforms.Transforms
+import scala.collection.JavaConverters._
 
-case class AlgorithmParams(mult: Int) extends Params
-
-class Algorithm(val ap: AlgorithmParams)
+class Algorithm
   extends P2LAlgorithm[PreparedData, Model, Query, PredictedResult] {
 
   @transient lazy val logger = Logger[this.type]
 
   def train(data: PreparedData): Model = {
-    val sc = data.sentences.sparkContext
     val w2v = new Word2Vec()
-    sc.getConf.set(Word2VecPerformer.NEGATIVE, String.valueOf(0))
     val r = w2v.train(data.sentences)
     new Model(r.getFirst, r.getSecond)
   }
 
   def predict(model: Model, query: Query): PredictedResult = {
-    val vec = model.weights.vector(query.word)
-    val arr = Array.range(0, vec.columns() - 1).map(vec.getDouble)
-    PredictedResult(arr)
+    val vecA: INDArray = model.weights.vector(query.word)
+    val vecAU: INDArray = Transforms.unitVec(vecA)
+
+    val words = model.vocabCache.words.iterator.asScala.filter(_ != query.word)
+    val wordsWithScores = words.map(word => {
+      val vecB: INDArray = model.weights.vector(word)
+      val vecBU: INDArray = Transforms.unitVec(vecB)
+
+      (word, blas.dot(vecAU, vecBU))
+    })
+
+    val similar = wordsWithScores
+      .toArray
+      .sortBy(_._2)(Ordering[Double].reverse)
+      .take(query.num)
+      .map(_._1)
+    PredictedResult(similar)
   }
+
+  private def blas: BlasWrapper[INDArray] =
+    Nd4j.getBlasWrapper.asInstanceOf[BlasWrapper[INDArray]]
 }
 
 class Model(val vocabCache: VocabCache,

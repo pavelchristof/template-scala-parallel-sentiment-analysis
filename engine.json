@@ -1,7 +1,14 @@
 {
-  "id": "default",
-  "description": "Default settings",
+  "id": "example",
+  "description": "Example settings",
   "engineFactory": "org.template.word2vec.Word2VecEngine",
+  "sparkConf": {
+    "org.deeplearning4j.scaleout.perform.models.word2vec": {
+      "negative": 0,
+      "length": 100,
+      "window": 5
+    }
+  },
   "datasource": {
     "params" : {
       "appId": 1
@@ -10,9 +17,7 @@
   "algorithms": [
     {
       "name": "algo",
-      "params": {
-        "mult" : 1
-      }
+      "params": {}
     }
   ]
 }
