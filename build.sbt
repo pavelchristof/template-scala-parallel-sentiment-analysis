@@ -2,18 +2,22 @@ import AssemblyKeys._
 
 assemblySettings
 
-name := "template-scala-parallel-word2vec"
+name := "template-scala-parallel-sentiment-analysis"
 
 organization := "io.prediction"
 
 resolvers += Resolver.mavenLocal
 
 libraryDependencies ++= Seq(
-  "io.prediction"     %% "core"           % "0.8.7-SNAPSHOT" % "provided",
-  "org.apache.spark"  %% "spark-core"     % "1.2.0" % "provided",
-  "org.deeplearning4j" % "dl4j-spark-nlp" % "0.0.3.3.3.alpha1-SNAPSHOT",
-  "org.nd4j"           % "nd4j-jblas"     % "0.0.3.5.5.3-SNAPSHOT",
-  "com.google.guava"   % "guava"          % "14.0.1"
+  "io.prediction"     %% "core"                % "0.8.7-SNAPSHOT" % "provided",
+  "org.apache.spark"  %% "spark-core"          % "1.2.0"          % "provided",
+  "org.deeplearning4j" % "deeplearning4j-core" % "0.0.3.3",
+  "org.deeplearning4j" % "deeplearning4j-nlp"  % "0.0.3.3"
+    exclude("javax.jms", "jms")
+    exclude("com.sun.jdmk", "jmxtools")
+    exclude("com.sun.jmx", "jmxri"),
+  "org.nd4j"           % "nd4j-jblas"              % "0.0.3.5.5.1",
+  "com.google.guava"   % "guava"                   % "14.0.1"
 )
 
 excludedJars in assembly := {

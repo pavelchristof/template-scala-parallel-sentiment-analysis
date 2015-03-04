@@ -1,50 +1,50 @@
-package org.template.word2vec
+package org.template.sentiment
 
 import grizzled.slf4j.Logger
 import io.prediction.controller._
-import org.deeplearning4j.models.embeddings.WeightLookupTable
-import org.deeplearning4j.models.word2vec.wordstore.VocabCache
-import org.deeplearning4j.spark.models.word2vec.Word2Vec
-import org.nd4j.linalg.api.ndarray.INDArray
-import org.nd4j.linalg.factory.{BlasWrapper, Nd4j}
-import org.nd4j.linalg.ops.transforms.Transforms
-import scala.collection.JavaConverters._
+import org.apache.spark.SparkContext
+import org.deeplearning4j.models.word2vec.Word2Vec
+import org.deeplearning4j.text.inputsanitation.InputHomogenization
+import org.deeplearning4j.text.sentenceiterator.{CollectionSentenceIterator, SentencePreProcessor}
+import org.deeplearning4j.text.tokenization.tokenizerfactory.UimaTokenizerFactory
 
-class Algorithm
+import scala.collection.JavaConversions._
+
+object PreProcessor extends SentencePreProcessor {
+  override def preProcess(s: String): String =
+    new InputHomogenization(s).transform()
+}
+
+case class AlgorithmParams (
+  val windowSize: Int,
+  val layerSize: Int
+) extends Params
+
+class Algorithm(val params: AlgorithmParams)
   extends P2LAlgorithm[PreparedData, Model, Query, PredictedResult] {
 
   @transient lazy val logger = Logger[this.type]
 
-  def train(data: PreparedData): Model = {
-    val w2v = new Word2Vec()
-    val r = w2v.train(data.sentences)
-    new Model(r.getFirst, r.getSecond)
+  def train(sc: SparkContext, data: PreparedData): Model = {
+    val sentences = data.sentences.collect.toSeq
+    val sentenceIterator = new CollectionSentenceIterator(PreProcessor, sentences)
+    val tokenizerFactory = new UimaTokenizerFactory()
+    val word2vec = new Word2Vec.Builder()
+      .windowSize(params.windowSize).layerSize(params.layerSize)
+      .iterate(sentenceIterator)
+      .tokenizerFactory(tokenizerFactory)
+      .build()
+
+    word2vec.fit()
+    new Model(word2vec)
   }
 
   def predict(model: Model, query: Query): PredictedResult = {
-    val vecA: INDArray = model.weights.vector(query.word)
-    val vecAU: INDArray = Transforms.unitVec(vecA)
-
-    val words = model.vocabCache.words.iterator.asScala.filter(_ != query.word)
-    val wordsWithScores = words.map(word => {
-      val vecB: INDArray = model.weights.vector(word)
-      val vecBU: INDArray = Transforms.unitVec(vecB)
-
-      (word, blas.dot(vecAU, vecBU))
-    })
-
-    val similar = wordsWithScores
-      .toArray
-      .sortBy(_._2)(Ordering[Double].reverse)
-      .take(query.num)
-      .map(_._1)
-    PredictedResult(similar)
+    val words = model.word2vec.wordsNearest(query.word, query.num)
+    PredictedResult(words.toSeq.toArray)
   }
-
-  private def blas: BlasWrapper[INDArray] =
-    Nd4j.getBlasWrapper.asInstanceOf[BlasWrapper[INDArray]]
 }
 
-class Model(val vocabCache: VocabCache,
-            val weights: WeightLookupTable)
-  extends Serializable {}
+class Model(
+  val word2vec: Word2Vec
+) extends Serializable {}

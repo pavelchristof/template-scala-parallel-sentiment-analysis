@@ -1,4 +1,4 @@
-package org.template.word2vec
+package org.template.sentiment
 
 import grizzled.slf4j.Logger
 import io.prediction.controller._
@@ -36,9 +36,6 @@ case class Tweet(text: String,
                  sentiment: String)
   extends Serializable
 
-class TrainingData(val tweets: RDD[Tweet])
-  extends Serializable with SanityCheck {
-  override def sanityCheck(): Unit = {
-    assert(tweets.count() > 0)
-  }
-}
+class TrainingData(
+  val tweets: RDD[Tweet]
+) extends Serializable

@@ -1,4 +1,4 @@
-package org.template.word2vec
+package org.template.sentiment
 
 import io.prediction.controller.{SanityCheck, PPreparator}
 import org.apache.spark.SparkContext
@@ -8,7 +8,7 @@ class Preparator
   extends PPreparator[TrainingData, PreparedData] {
 
   def prepare(sc: SparkContext, trainingData: TrainingData): PreparedData = {
-    PreparedData(trainingData.tweets.map(_.text).sample(false, 0.1))
+    PreparedData(trainingData.tweets.map(_.text).sample(false, 0.001))
   }
 }
 

@@ -1,4 +1,4 @@
-package org.template.word2vec
+package org.template.sentiment
 
 import io.prediction.controller.LServing
 

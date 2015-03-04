@@ -3,7 +3,7 @@ import fileinput
 import csv
 
 client = predictionio.EventClient(
-    access_key = "Mgd6ZwXAeOVW7cTcOX9BnA9UOD8M2397ShGGjmLS5j5cC6olr0yLpBw7WSivM3ej",
+    access_key = "CYwhPig17a1z7eA88S0WsiwAI50zDB3ASp3qdblpRw19Wghy0TYehbKgL71S2dXX",
     url = "http://localhost:7070",
     threads = 8,
     qsize = 500
@@ -22,4 +22,3 @@ for row in reader:
     )
 
 client.close()
-

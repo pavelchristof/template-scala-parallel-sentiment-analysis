@@ -1,23 +1,19 @@
 {
   "id": "example",
   "description": "Example settings",
-  "engineFactory": "org.template.word2vec.Word2VecEngine",
-  "sparkConf": {
-    "org.deeplearning4j.scaleout.perform.models.word2vec": {
-      "negative": 0,
-      "length": 100,
-      "window": 5
-    }
-  },
+  "engineFactory": "org.template.sentiment.SentimentAnalysisEngine",
   "datasource": {
     "params" : {
-      "appId": 1
+      "appId": 2
     }
   },
   "algorithms": [
     {
       "name": "algo",
-      "params": {}
+      "params": {
+        "layerSize": 300,
+        "windowSize": 5
+      }
     }
   ]
 }
