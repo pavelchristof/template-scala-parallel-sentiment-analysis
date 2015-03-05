@@ -2,11 +2,15 @@ package org.template.sentiment
 
 import grizzled.slf4j.Logger
 import io.prediction.controller._
+import org.apache.commons.math3.random.MersenneTwister
 import org.apache.spark.SparkContext
+import org.deeplearning4j.models.rntn.RNTN
 import org.deeplearning4j.models.word2vec.Word2Vec
+import org.deeplearning4j.text.corpora.treeparser.{TreeParser, TreeVectorizer}
 import org.deeplearning4j.text.inputsanitation.InputHomogenization
 import org.deeplearning4j.text.sentenceiterator.{CollectionSentenceIterator, SentencePreProcessor}
 import org.deeplearning4j.text.tokenization.tokenizerfactory.UimaTokenizerFactory
+import org.nd4j.linalg.api.activation.Activations
 
 import scala.collection.JavaConversions._
 
@@ -26,7 +30,7 @@ class Algorithm(val params: AlgorithmParams)
   @transient lazy val logger = Logger[this.type]
 
   def train(sc: SparkContext, data: PreparedData): Model = {
-    val sentences = data.sentences.collect.toSeq
+    val sentences = data.unlabeled.collect.toSeq
     val sentenceIterator = new CollectionSentenceIterator(PreProcessor, sentences)
     val tokenizerFactory = new UimaTokenizerFactory()
     val word2vec = new Word2Vec.Builder()
@@ -34,17 +38,45 @@ class Algorithm(val params: AlgorithmParams)
       .iterate(sentenceIterator)
       .tokenizerFactory(tokenizerFactory)
       .build()
-
     word2vec.fit()
-    new Model(word2vec)
+
+    val rntn = new RNTN.Builder()
+      .setActivationFunction(Activations.hardTanh)
+      .setFeatureVectors(word2vec)
+      .setUseTensors(true)
+      .setRng(new MersenneTwister(123))
+      .build()
+
+    val labels = data.labels
+    val labeled = data.labeled.collect
+    val vectorizer = createVectorizer()
+    labeled.foreach(tw => {
+      val trees = vectorizer.getTreesWithLabels(tw.text, tw.sentiment, labels)
+      rntn.fit(trees)
+    })
+
+    /*val labels = data.labels
+    val trees = for (
+      s <- data.labeled;
+      v = createVectorizer()
+    ) yield v.getTreesWithLabels(s.text, s.sentiment, labels)
+    trees.foreach(rntn.fit(_))
+*/
+    new Model(word2vec, rntn, labels)
   }
 
   def predict(model: Model, query: Query): PredictedResult = {
-    val words = model.word2vec.wordsNearest(query.word, query.num)
-    PredictedResult(words.toSeq.toArray)
+    val trees = createVectorizer().getTrees(query.text)
+    val scores = model.rntn.predict(trees)
+    PredictedResult(model.labels.zip(scores).toArray)
   }
+
+  private def createVectorizer() =
+    new TreeVectorizer(new TreeParser())
 }
 
 class Model(
-  val word2vec: Word2Vec
-) extends Serializable {}
+  val word2vec: Word2Vec,
+  val rntn: RNTN,
+  val labels: List[String]
+) extends Serializable

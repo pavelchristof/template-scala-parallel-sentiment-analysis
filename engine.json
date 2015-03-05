@@ -11,7 +11,7 @@
     {
       "name": "algo",
       "params": {
-        "layerSize": 300,
+        "layerSize": 50,
         "windowSize": 5
       }
     }

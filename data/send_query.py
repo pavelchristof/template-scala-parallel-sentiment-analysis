@@ -10,5 +10,5 @@ engine_client = predictionio.EngineClient(
     timeout = 60
 )
 while True:
-    word = raw_input('Enter a word: ')
-    print engine_client.send_query({"word": word, "num": 10})
+    text = raw_input('Enter a sentence: ')
+    print engine_client.send_query({"text": text})
