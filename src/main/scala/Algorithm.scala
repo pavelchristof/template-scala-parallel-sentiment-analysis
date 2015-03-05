@@ -55,20 +55,13 @@ class Algorithm(val params: AlgorithmParams)
       rntn.fit(trees)
     })
 
-    /*val labels = data.labels
-    val trees = for (
-      s <- data.labeled;
-      v = createVectorizer()
-    ) yield v.getTreesWithLabels(s.text, s.sentiment, labels)
-    trees.foreach(rntn.fit(_))
-*/
     new Model(word2vec, rntn, labels)
   }
 
   def predict(model: Model, query: Query): PredictedResult = {
-    val trees = createVectorizer().getTrees(query.text)
+    val trees = createVectorizer().getTreesWithLabels(query.text, model.labels)
     val scores = model.rntn.predict(trees)
-    PredictedResult(model.labels.zip(scores).toArray)
+    PredictedResult(scores.map(model.labels.get(_)).toArray)
   }
 
   private def createVectorizer() =
