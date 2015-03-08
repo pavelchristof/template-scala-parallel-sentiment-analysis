@@ -3,8 +3,14 @@
   "description": "Example settings",
   "engineFactory": "org.template.sentiment.SentimentAnalysisEngine",
   "datasource": {
-    "params" : {
+    "params": {
       "appId": 2
+    }
+  },
+  "preparator": {
+    "params": {
+      "unlabeledSample": 0.1,
+      "labeledSample": 0.00001
     }
   },
   "algorithms": [

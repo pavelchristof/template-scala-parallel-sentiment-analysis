@@ -6,7 +6,9 @@ import io.prediction.data.storage.Storage
 import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 
-case class DataSourceParams(appId: Int) extends Params
+case class DataSourceParams(
+  appId: Int
+) extends Params
 
 class DataSource(val dsp: DataSourceParams)
   extends PDataSource[TrainingData,

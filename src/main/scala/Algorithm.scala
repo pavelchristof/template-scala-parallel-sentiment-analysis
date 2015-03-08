@@ -4,19 +4,27 @@ import grizzled.slf4j.Logger
 import io.prediction.controller._
 import org.apache.commons.math3.random.MersenneTwister
 import org.apache.spark.SparkContext
+import org.deeplearning4j.models.featuredetectors.autoencoder.recursive.Tree
 import org.deeplearning4j.models.rntn.RNTN
 import org.deeplearning4j.models.word2vec.Word2Vec
 import org.deeplearning4j.text.corpora.treeparser.{TreeParser, TreeVectorizer}
 import org.deeplearning4j.text.inputsanitation.InputHomogenization
 import org.deeplearning4j.text.sentenceiterator.{CollectionSentenceIterator, SentencePreProcessor}
 import org.deeplearning4j.text.tokenization.tokenizerfactory.UimaTokenizerFactory
-import org.nd4j.linalg.api.activation.Activations
+import org.nd4j.linalg.api.ndarray.INDArray
 
 import scala.collection.JavaConversions._
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 object PreProcessor extends SentencePreProcessor {
   override def preProcess(s: String): String =
     new InputHomogenization(s).transform()
+}
+
+object ND4JUtils {
+  def toDoubleArray(iNDArray: INDArray): Array[Double] =
+    Array.tabulate(iNDArray.length)(iNDArray.getDouble)
 }
 
 case class AlgorithmParams (
@@ -41,30 +49,55 @@ class Algorithm(val params: AlgorithmParams)
     word2vec.fit()
 
     val rntn = new RNTN.Builder()
-      .setActivationFunction(Activations.hardTanh)
+      .setActivationFunction("tanh")
       .setFeatureVectors(word2vec)
-      .setUseTensors(true)
-      .setRng(new MersenneTwister(123))
+      .setRng(new MersenneTwister())
+      .setCombineClassification(false)
       .build()
 
     val labels = data.labels
-    val labeled = data.labeled.collect
-    val vectorizer = createVectorizer()
-    labeled.foreach(tw => {
-      val trees = vectorizer.getTreesWithLabels(tw.text, tw.sentiment, labels)
-      rntn.fit(trees)
-    })
+    val trees = data.labeled
+      .mapPartitions(vectorize(_, labels))
+      .filter(_._2.nonEmpty)
+      .map { case (tweet, trees) => {
+        val root = mergeTrees(trees, labels)
+        root.setLabel(tweet.sentiment)
+        root
+      }}
+      .collect()
 
+    val future = rntn.fit(trees.toList)
+    Await.ready(future, Duration.Inf)
+
+    rntn.getActorSystem.shutdown()
     new Model(word2vec, rntn, labels)
   }
 
-  def predict(model: Model, query: Query): PredictedResult = {
-    val trees = createVectorizer().getTreesWithLabels(query.text, model.labels)
-    val scores = model.rntn.predict(trees)
-    PredictedResult(scores.map(model.labels.get(_)).toArray)
+  def vectorize(texts: Iterator[Tweet], labels: List[String]) = {
+    val vectorizer = getVectorizer()
+    texts.map(tweet => {
+      val prepText = PreProcessor.preProcess(tweet.text)
+      val trees = vectorizer.getTreesWithLabels(prepText, labels)
+      (tweet, trees)
+    })
   }
 
-  private def createVectorizer() =
+  def mergeTrees(trees: Seq[Tree], labels: List[String]) =
+    trees.reduceRight((a, b) => {
+      val parent = new Tree(labels)
+      parent.connect(List(a, b))
+      parent
+    })
+
+  def predict(model: Model, query: Query): PredictedResult = {
+    val text = PreProcessor.preProcess(query.text)
+    val trees = getVectorizer().getTreesWithLabels(text, model.labels)
+    val result = model.rntn.output(List(mergeTrees(trees, model.labels)))
+    val scores = ND4JUtils.toDoubleArray(result.head)
+    PredictedResult(model.labels.zip(scores).toArray)
+  }
+
+  private def getVectorizer() =
     new TreeVectorizer(new TreeParser())
 }
 
